@@ -1,0 +1,12 @@
+load data;
+
+signal_length = sum(durations);
+x = 1:signal_length;
+y = zeros(signal_length);
+
+index = 1;
+for i = 1:length(durations)
+    for u = 1:durations(i)
+        
+    end
+end
