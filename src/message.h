@@ -3,6 +3,9 @@
 #define COMMAND_MASK        0b00000000000000000000000000010000
 #define UNIT_CODE_MASK      0b00000000000000000000000000001111
 
+#ifndef MESSAGE_H
+#define MESSAGE_H
+
 struct Message {
   unsigned int transmitterId, unitCode;
   bool isGroupCommand, command;
@@ -11,3 +14,5 @@ struct Message {
     transmitterId(transmitterId), unitCode(unitCode),
     isGroupCommand(isGroupCommand), command (command) { }
 };
+
+#endif

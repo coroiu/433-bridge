@@ -8,16 +8,19 @@
 #include <Adafruit_GFX.h>
 
 #include "receiver.h"
+#include "transmitter.h"
 
 #define OLED_RESET D4
+#define LED_PIN D7
+#define INPUT_PIN D3
+#define TRANSMIT_PIN D4
 
 Adafruit_SSD1306 display(OLED_RESET);
 // RCSwitch mySwitch = RCSwitch();
-int ledPin = D7;
-int inputPin = D3;
 int count = 0;
 
-Receiver receiver(inputPin);
+Receiver receiver(INPUT_PIN);
+Transmitter transmitter(TRANSMIT_PIN);
 
 volatile int inputPinState = 0;
 volatile long timeOfLastChange = 0;
@@ -46,10 +49,10 @@ void setup() {
 
   Spark.publish("433", "Listening");
 
-  pinMode(inputPin, INPUT);
-  // mySwitch.enableReceive(inputPin);
-  // attachInterrupt(inputPin, handleRadioInput, CHANGE);
-  pinMode(ledPin, OUTPUT);
+  pinMode(INPUT_PIN, INPUT);
+  // mySwitch.enableReceive(INPUT_PIN);
+  // attachInterrupt(INPUT_PIN, handleRadioInput, CHANGE);
+  pinMode(LED_PIN, OUTPUT);
 
   display.setCursor(0,0);
   display.println("Listening");
@@ -61,7 +64,7 @@ void setup() {
 void loop() {
   int availableData(0);
   if (availableData = receiver.availableData()) {
-    digitalWrite(ledPin, 1);
+    digitalWrite(LED_PIN, 1);
 
     Message message = receiver.getMessage();
     noInterrupts();
@@ -95,9 +98,9 @@ void loop() {
     }
     Serial.println();
   } else {
-    digitalWrite(ledPin, 0);
+    digitalWrite(LED_PIN, 0);
   }
-  // digitalWrite(ledPin, receiver.getLastReceived().value);
+  // digitalWrite(LED_PIN, receiver.getLastReceived().value);
 
   // if (longestTimeWithoutChange < timeSinceLastChange) {
   //   longestTimeWithoutChange = timeSinceLastChange;
@@ -122,8 +125,8 @@ void loop() {
 }
 
 void handleRadioInput() {
-  // digitalWrite(ledPin, 1);
-  inputPinState = digitalRead(inputPin);
+  // digitalWrite(LED_PIN, 1);
+  inputPinState = digitalRead(INPUT_PIN);
   long time = millis();
   timeSinceLastChange = millis() - timeOfLastChange;
   timeOfLastChange = time;

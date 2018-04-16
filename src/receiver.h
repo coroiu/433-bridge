@@ -1,22 +1,17 @@
-// #include <stdlib.h>
+#ifndef RECEIVER_H
+#define RECEIVER_H
+
 #include <cmath>
 
 #if defined(SPARK)
     #include "application.h"
 #endif
 
+#include "constants.h"
 #include "message.h"
 #include "digital_read.h"
 #include "communication_bit.h"
 #include "receiver_state.h"
-
-#define TIME_UNIT 250 // ~319
-#define TIME_UNIT_TOLERANCE TIME_UNIT / 2 // 319 - 250 = 69
-#define START_BIT_DURATION TIME_UNIT * 10 // 2641
-#define START_BIT_TOLERANCE TIME_UNIT
-#define STOP_BIT_DURATION 9000
-#define MESSAGE_BUFFER_LENGTH 32
-#define RECEIVE_BUFFER_LENGTH MESSAGE_BUFFER_LENGTH * 2
 
 using namespace std;
 
@@ -52,3 +47,5 @@ public:
   const bool* getData();
   const Message getMessage();
 };
+
+#endif
