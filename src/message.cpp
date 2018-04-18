@@ -1,9 +1,7 @@
 #include "message.h"
 
 Message::Message(int messageInt) {
-  Serial.println(messageInt);
   transmitterId  = (messageInt & TRANSMITTER_ID_MASK) >> TRANSMITTER_ID_SHIFT,
-  Serial.println(transmitterId);
   unitCode       = ((~messageInt) & UNIT_CODE_MASK) >> UNIT_CODE_SHIFT;
   // The shifts below could actually be skipped because of the
   // implicit conversion to bool that does a > 1 check.

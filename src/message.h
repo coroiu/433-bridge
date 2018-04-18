@@ -18,6 +18,7 @@ struct Message {
   unsigned int transmitterId, unitCode;
   bool isGroupCommand, command;
 
+  Message() = default;
   Message(int fromInt);
   Message(unsigned int transmitterId, unsigned int unitCode, bool isGroupCommand, bool command):
     transmitterId(transmitterId), unitCode(unitCode),

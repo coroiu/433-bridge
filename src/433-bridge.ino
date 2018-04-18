@@ -15,6 +15,7 @@
 #define INPUT_PIN D3
 #define TRANSMIT_PIN D4
 #define CLOUD_FUNCTION_DELIMITER ","
+#define DEBOUNCE_TIME 500
 
 Adafruit_SSD1306 display(OLED_RESET);
 // RCSwitch mySwitch = RCSwitch();
@@ -23,11 +24,8 @@ int count = 0;
 Receiver receiver(INPUT_PIN);
 Transmitter transmitter(TRANSMIT_PIN);
 
-volatile int inputPinState = 0;
-volatile long timeOfLastChange = 0;
-volatile long timeSinceLastChange = 0;
-volatile long longestTimeWithoutChange = 0;
-volatile long timeOnDisplay = -1;
+Message lastMessageReceived;
+unsigned long lastMessageReceivedAt(0);
 
 void setup() {
   Serial.begin(9600);
@@ -45,7 +43,8 @@ void setup() {
   display.clearDisplay();   // clears the screen and buffer
   delay(2000);
 
-  Particle.publish("433", "Listening");
+  Particle.publish("433/status", "listening");
+  Particle.subscribe("433/message/send", transmitEvent, MY_DEVICES);
   Particle.function("transmit", transmit);
 
   pinMode(INPUT_PIN, INPUT);
@@ -66,24 +65,32 @@ void loop() {
     digitalWrite(LED_PIN, 1);
 
     Message message = receiver.getMessage();
-    noInterrupts();
-    display.clearDisplay();
-    display.setCursor(0,0);
-    display.println("Received: ");
-    display.println();
-    printMessageToDisplay(message);
-    display.display();
-    interrupts();
+    unsigned long receivedAt = millis();
 
-    const bool* bits = receiver.getData();
-    for (size_t i = 0; i < availableData; ++i) {
-      Serial.print(bits[i]);
+    if (
+      receivedAt - lastMessageReceivedAt > DEBOUNCE_TIME ||
+      lastMessageReceived.transmitterId != message.transmitterId
+    ) {
+      publishMessage(message);
+      noInterrupts();
+      display.clearDisplay();
+      display.setCursor(0,0);
+      display.println("Received: ");
+      display.println();
+      printMessageToDisplay(message);
+      display.display();
+      interrupts();
     }
-    Serial.println();
+
+    lastMessageReceived = message;
+    lastMessageReceivedAt = receivedAt;
   } else {
     digitalWrite(LED_PIN, 0);
   }
+}
 
+int transmitEvent(const char* event, const char* data) {
+  transmit(String(data));
 }
 
 int transmit(String command) {
@@ -125,6 +132,17 @@ int* parseCommand(String command) {
      values[idx++] = atoi(pt);
   }
   return values;
+}
+
+void publishMessage(Message message) {
+  char charBuf[63];
+  sprintf(charBuf, "%d,%d,%d,%d",
+    message.transmitterId,
+    message.unitCode,
+    (int) message.isGroupCommand,
+    (int) message.command
+  );
+  Particle.publish("433/message", charBuf, 60, PRIVATE);
 }
 
 void printMessageToDisplay(Message message) {

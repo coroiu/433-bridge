@@ -46,7 +46,6 @@ const Message Receiver::getMessage() {
       messageInt |= bitMask;
     }
   }
-
   dataLength = 0;
   return Message(messageInt);
 }
