@@ -48,12 +48,7 @@ const Message Receiver::getMessage() {
   }
 
   dataLength = 0;
-  return Message(
-    messageInt & TRANSMITTER_ID_MASK,
-    (~messageInt) & UNIT_CODE_MASK,
-    messageInt & GROUP_COMMAND_MASK,
-    messageInt & COMMAND_MASK
-  );
+  return Message(messageInt);
 }
 
 void Receiver::addBitToReceiveBuffer(int bit) {

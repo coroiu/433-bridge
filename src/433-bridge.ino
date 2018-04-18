@@ -14,6 +14,7 @@
 #define LED_PIN D7
 #define INPUT_PIN D3
 #define TRANSMIT_PIN D4
+#define CLOUD_FUNCTION_DELIMITER ","
 
 Adafruit_SSD1306 display(OLED_RESET);
 // RCSwitch mySwitch = RCSwitch();
@@ -31,11 +32,8 @@ volatile long timeOnDisplay = -1;
 void setup() {
   Serial.begin(9600);
   Wire.setSpeed(CLOCK_SPEED_400KHZ);
-  //Wire.setSpeed(800000L);
 
-  // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C addr 0x3D (for the 128x64)
-  // init done
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C addr 0x3C (for the 128x64)
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(WHITE);
@@ -47,12 +45,13 @@ void setup() {
   display.clearDisplay();   // clears the screen and buffer
   delay(2000);
 
-  Spark.publish("433", "Listening");
+  Particle.publish("433", "Listening");
+  Particle.function("transmit", transmit);
 
   pinMode(INPUT_PIN, INPUT);
-  // mySwitch.enableReceive(INPUT_PIN);
-  // attachInterrupt(INPUT_PIN, handleRadioInput, CHANGE);
   pinMode(LED_PIN, OUTPUT);
+  pinMode(TRANSMIT_PIN, OUTPUT);
+  digitalWrite(TRANSMIT_PIN, 0);
 
   display.setCursor(0,0);
   display.println("Listening");
@@ -70,28 +69,12 @@ void loop() {
     noInterrupts();
     display.clearDisplay();
     display.setCursor(0,0);
-
-    display.print("Transmitter id: ");
-    display.println(message.transmitterId);
-
-    display.print("Unit code: ");
-    display.println(message.unitCode);
-
-    display.print("Group command: ");
-    display.println(message.isGroupCommand);
-
-    display.print("Command: ");
-    display.println(message.command);
-
+    display.println("Received: ");
+    display.println();
+    printMessageToDisplay(message);
     display.display();
     interrupts();
 
-    // const bool* bits = receiver.getBuffer();
-    // for (size_t i = 0; i < RECEIVE_BUFFER_LENGTH; ++i) {
-    //   Serial.print(bits[i]);
-    // }
-    // Serial.println();
-    //
     const bool* bits = receiver.getData();
     for (size_t i = 0; i < availableData; ++i) {
       Serial.print(bits[i]);
@@ -100,34 +83,60 @@ void loop() {
   } else {
     digitalWrite(LED_PIN, 0);
   }
-  // digitalWrite(LED_PIN, receiver.getLastReceived().value);
 
-  // if (longestTimeWithoutChange < timeSinceLastChange) {
-  //   longestTimeWithoutChange = timeSinceLastChange;
-  // }
-  //
-  // if (timeOnDisplay != longestTimeWithoutChange) {
-  //   noInterrupts();
-  //   display.clearDisplay();
-  //   display.setCursor(0,0);
-  //   display.println(longestTimeWithoutChange);
-  //   display.display();
-  //   timeOnDisplay = longestTimeWithoutChange;
-  //   interrupts();
-  // }
-
-  // display.clearDisplay();
-  // display.setCursor(0,0);
-  // noInterrupts();
-  // display.println(inputPinState);
-  // display.display();
-  // interrupts();
 }
 
-void handleRadioInput() {
-  // digitalWrite(LED_PIN, 1);
-  inputPinState = digitalRead(INPUT_PIN);
-  long time = millis();
-  timeSinceLastChange = millis() - timeOfLastChange;
-  timeOfLastChange = time;
+int transmit(String command) {
+  int* values = parseCommand(command);
+  Message message(
+    values[0], // Transmitted id,
+    values[1], // Unit code
+    values[2], // isGroupCommand
+    values[3]  // Command
+  );
+
+  receiver.stopReceive();
+  transmitter.transmit(message);
+
+  display.clearDisplay();
+  display.setCursor(0,0);
+  display.println("Transmitted: ");
+  display.println();
+  printMessageToDisplay(message);
+  display.display();
+
+  receiver.startReceive();
+
+  delete values;
+}
+
+int* parseCommand(String command) {
+  // Begin black magic supplied by @mdma at:
+  // https://community.spark.io/t/gpio-control-via-gui/6310/7
+  char charBuf[63];
+  strncpy(charBuf, command.c_str(), sizeof(charBuf));
+  const int value_count = 4;  // the maximum number of values
+  int* values = new int[value_count];    // store the values here
+
+  char string[63];
+  strcpy(string, charBuf);  // the string to split
+  int idx = 0;
+  for (char* pt=strtok(string, CLOUD_FUNCTION_DELIMITER); pt && idx < value_count; pt=strtok(NULL, CLOUD_FUNCTION_DELIMITER)) {
+     values[idx++] = atoi(pt);
+  }
+  return values;
+}
+
+void printMessageToDisplay(Message message) {
+  display.print("Transmitter id: ");
+  display.println(message.transmitterId);
+
+  display.print("Unit code: ");
+  display.println(message.unitCode);
+
+  display.print("Group command: ");
+  display.println(message.isGroupCommand);
+
+  display.print("Command: ");
+  display.println(message.command);
 }
